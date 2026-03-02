@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, SlidersHorizontal, Plus, Check, ChevronDown } from "lucide-react";
+import { Search, SlidersHorizontal, Plus, Check, ChevronDown, Trash2 } from "lucide-react";
 
 // ── Image assets (served from Figma local asset server) ───────────────────────
 const img1 = "http://localhost:3845/assets/09dbb76c8e5f9c6f456f7e3d2d79c761e8171f5e.png";
@@ -279,19 +279,26 @@ function RecipeDetailModal({ recipe, onClose }: { recipe: Recipe | null; onClose
 }
 
 // ── Recipe card ───────────────────────────────────────────────────────────────
-function RecipeCard({ recipe, onClick }: { recipe: Recipe; onClick: () => void }) {
+function RecipeCard({ recipe, onClick, onDelete }: { recipe: Recipe; onClick: () => void; onDelete: () => void }) {
   return (
     <div
-      className="bg-white border border-[#d9d9d9] rounded-lg flex flex-col gap-4 p-4 min-w-0 cursor-pointer hover:shadow-md transition-shadow"
+      className="bg-white border border-[#d9d9d9] rounded-lg flex flex-col gap-4 p-4 min-w-0 cursor-pointer hover:shadow-md transition-shadow group"
       onClick={onClick}
     >
       {/* Image */}
-      <div className="relative h-[208px] rounded-md overflow-hidden flex items-start justify-end p-2 shrink-0">
+      <div className="relative h-[208px] rounded-md overflow-hidden flex items-start justify-between p-2 shrink-0">
         <img
           src={recipe.image}
           alt={recipe.title}
           className="absolute inset-0 w-full h-full object-cover"
         />
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="relative z-10 w-7 h-7 flex items-center justify-center bg-[#2c2c2c]/80 text-[#f5f5f5] rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#ec221f]"
+          aria-label="Delete recipe"
+        >
+          <Trash2 size={13} strokeWidth={2} />
+        </button>
         <AgeBadge age={recipe.age} />
       </div>
 
@@ -315,11 +322,11 @@ function RecipeCard({ recipe, onClick }: { recipe: Recipe; onClick: () => void }
 }
 
 // ── Cards grid ────────────────────────────────────────────────────────────────
-function CardsGrid({ recipes, onSelect }: { recipes: Recipe[]; onSelect: (r: Recipe) => void }) {
+function CardsGrid({ recipes, onSelect, onDelete }: { recipes: Recipe[]; onSelect: (r: Recipe) => void; onDelete: (id: number) => void }) {
   return (
     <div className="flex-1 bg-[#fdfaf6] p-6 grid grid-cols-4 gap-4 items-start content-start">
       {recipes.map((r) => (
-        <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} />
+        <RecipeCard key={r.id} recipe={r} onClick={() => onSelect(r)} onDelete={() => onDelete(r.id)} />
       ))}
     </div>
   );
@@ -447,6 +454,11 @@ export default function App() {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
+  function handleDelete(id: number) {
+    setRecipes((rs) => rs.filter((r) => r.id !== id));
+    setSelectedRecipe((s) => (s?.id === id ? null : s));
+  }
+
   function handleAdd(data: Omit<Recipe, "id">) {
     const image = data.image || IMAGES[recipes.length % IMAGES.length];
     setRecipes((rs) => [...rs, { ...data, image, id: Date.now() }]);
@@ -474,7 +486,7 @@ export default function App() {
         onMealTypeChange={setMealType}
       />
       {filtered.length > 0 ? (
-        <CardsGrid recipes={filtered} onSelect={setSelectedRecipe} />
+        <CardsGrid recipes={filtered} onSelect={setSelectedRecipe} onDelete={handleDelete} />
       ) : (
         <EmptyState />
       )}
